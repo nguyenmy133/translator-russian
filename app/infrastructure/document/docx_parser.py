@@ -3,9 +3,11 @@ Infrastructure: python-docx Adapter — implements IDocumentParser
 Dịch file Word giữ nguyên format (bold, italic, font size, color, tables)
 """
 import logging
+import html
+import xml.etree.ElementTree as ET
 from docx import Document
 from app.application.ports.document_port import IDocumentParser, DocumentStats
-from typing import Callable
+from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -52,55 +54,126 @@ class DocxParser(IDocumentParser):
         )
 
     @staticmethod
+    def _apply_style(run, style_data: dict) -> None:
+        run.bold = style_data["bold"]
+        run.italic = style_data["italic"]
+        run.underline = style_data["underline"]
+        if style_data["font_name"]:
+            run.font.name = style_data["font_name"]
+        if style_data["font_size"]:
+            run.font.size = style_data["font_size"]
+        if style_data["font_color"]:
+            try:
+                run.font.color.rgb = style_data["font_color"]
+            except Exception:
+                pass
+
+    @staticmethod
     def _translate_paragraph(para, translate_fn: Callable[[str], str]) -> tuple[int, int]:
         """Dịch một paragraph. Trả về (số đoạn đã dịch, số ký tự)."""
         original = para.text.strip()
         if not original:
             return 0, 0
 
-        try:
-            translated = translate_fn(original)
-        except Exception as e:
-            logger.warning(f"Lỗi dịch đoạn: {e}")
+        # Lọc ra các runs không trống
+        non_empty_runs = [r for r in para.runs if r.text]
+        
+        # Nếu không có runs nào hoặc toàn bộ văn bản rỗng
+        if not non_empty_runs:
+            try:
+                para.text = translate_fn(original)
+            except Exception as e:
+                logger.warning(f"Lỗi dịch đoạn văn không runs: {e}")
             return 1, len(original)
 
-        # Ghi lại nội dung, giữ style của run đầu tiên
-        if para.runs:
-            # Lưu style
-            first_run = para.runs[0]
-            bold = first_run.bold
-            italic = first_run.italic
-            underline = first_run.underline
-            font_name = first_run.font.name
-            font_size = first_run.font.size
-
-            # Lấy màu an toàn
+        # Trích xuất dữ liệu định dạng của các runs gốc
+        original_runs_data = []
+        html_parts = []
+        for run in non_empty_runs:
             font_color = None
             try:
-                if first_run.font.color and first_run.font.color.type:
-                    font_color = first_run.font.color.rgb
+                if run.font.color and run.font.color.type:
+                    font_color = run.font.color.rgb
             except Exception:
                 pass
 
-            # Xóa tất cả runs
-            for run in para.runs:
-                run.text = ""
+            style = {
+                "bold": run.bold,
+                "italic": run.italic,
+                "underline": run.underline,
+                "font_name": run.font.name,
+                "font_size": run.font.size,
+                "font_color": font_color,
+            }
+            original_runs_data.append(style)
+            
+            # Mã hóa nội dung text thành HTML an toàn
+            escaped_text = html.escape(run.text)
+            # Tạo tag span đại diện cho run
+            html_parts.append(f'<span id="{len(original_runs_data)-1}">{escaped_text}</span>')
 
-            # Ghi nội dung dịch vào run đầu tiên
-            first_run.text = translated
-            first_run.bold = bold
-            first_run.italic = italic
-            first_run.underline = underline
-            if font_name:
-                first_run.font.name = font_name
-            if font_size:
-                first_run.font.size = font_size
-            if font_color:
-                try:
-                    first_run.font.color.rgb = font_color
-                except Exception:
-                    pass
-        else:
-            para.text = translated
+        # Trường hợp tối ưu: chỉ có 1 run duy nhất
+        if len(original_runs_data) == 1:
+            try:
+                translated = translate_fn(original)
+                # Xóa toàn bộ runs cũ
+                for r in para.runs:
+                    r.text = ""
+                # Tạo run mới với style cũ
+                new_run = para.add_run(translated)
+                DocxParser._apply_style(new_run, original_runs_data[0])
+            except Exception as e:
+                logger.warning(f"Lỗi dịch đoạn văn 1 run: {e}")
+            return 1, len(original)
+
+        # Trường hợp nhiều runs: Dịch bằng giải thuật HTML Span Mapping
+        html_string = "".join(html_parts)
+        try:
+            translated_html = translate_fn(html_string)
+            
+            # Bọc root tag để parse XML
+            xml_str = f"<div>{translated_html}</div>"
+            root = ET.fromstring(xml_str)
+            
+            # Xóa sạch nội dung runs cũ
+            for r in para.runs:
+                r.text = ""
+
+            # Tạo các runs mới dựa trên cây XML đã được dịch và sắp xếp lại
+            # 1. Văn bản đứng trước thẻ span đầu tiên
+            if root.text:
+                new_run = para.add_run(root.text)
+                DocxParser._apply_style(new_run, original_runs_data[0])
+
+            # 2. Các thẻ span và phần đuôi (tail) của chúng
+            for child in root:
+                if child.tag == "span" and "id" in child.attrib:
+                    try:
+                        run_idx = int(child.attrib["id"])
+                        run_style = original_runs_data[run_idx]
+                    except (ValueError, IndexError):
+                        run_style = original_runs_data[0]
+
+                    # Ghi text trong span
+                    new_run = para.add_run(child.text or "")
+                    DocxParser._apply_style(new_run, run_style)
+
+                    # Ghi tail (văn bản đứng sau span)
+                    if child.tail:
+                        new_run_tail = para.add_run(child.tail)
+                        DocxParser._apply_style(new_run_tail, run_style)
+
+        except Exception as e:
+            logger.warning(f"Lỗi dịch HTML paragraph: {e}. Sử dụng fallback dịch thô.")
+            try:
+                translated_plain = translate_fn(original)
+                # Xóa sạch runs cũ
+                for r in para.runs:
+                    r.text = ""
+                # Tạo run mới áp dụng style của run đầu tiên
+                new_run = para.add_run(translated_plain)
+                DocxParser._apply_style(new_run, original_runs_data[0])
+            except Exception as fallback_err:
+                logger.error(f"Lỗi fallback dịch paragraph: {fallback_err}")
 
         return 1, len(original)

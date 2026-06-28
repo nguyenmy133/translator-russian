@@ -35,3 +35,11 @@ class IJobRepository(ABC):
     @abstractmethod
     def count_by_status(self, status: JobStatus) -> int:
         ...
+
+    @abstractmethod
+    def find_older_than_days(self, days: int) -> list[TranslationJob]:
+        ...
+
+    @abstractmethod
+    def delete(self, job_id: int) -> None:
+        ...

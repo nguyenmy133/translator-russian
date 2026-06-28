@@ -18,6 +18,7 @@ from app.application.use_cases.process_email_use_case import ProcessEmailUseCase
 from app.application.use_cases.translate_job_use_case import TranslateJobUseCase
 from app.application.use_cases.retry_job_use_case import RetryJobUseCase
 from app.application.use_cases.get_jobs_use_case import GetJobsUseCase
+from app.application.use_cases.clean_old_jobs_use_case import CleanOldJobsUseCase
 
 
 # ── Singletons ──────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ def get_translate_job_use_case() -> TranslateJobUseCase:
         document_parser=get_document_parser(),
         email_sender=get_email_sender(),
         output_dir=_settings.output_dir,
+        translator_email=_settings.gmail_address,
     )
 
 
@@ -93,5 +95,11 @@ def get_retry_job_use_case() -> RetryJobUseCase:
 
 def get_jobs_use_case() -> GetJobsUseCase:
     return GetJobsUseCase(
+        job_repository=get_job_repository(),
+    )
+
+
+def get_clean_old_jobs_use_case() -> CleanOldJobsUseCase:
+    return CleanOldJobsUseCase(
         job_repository=get_job_repository(),
     )

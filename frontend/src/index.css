@@ -584,6 +584,47 @@ tbody td {
   margin-bottom: 12px;
 }
 
+/* ── Date Filter ─────────────────────────────────────────────────── */
+.date-filter-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.date-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.date-input:focus {
+  border-color: var(--accent-light);
+}
+
+.date-filter-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .main-content { padding: 16px; }

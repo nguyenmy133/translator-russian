@@ -53,6 +53,7 @@ class ProcessEmailUseCase:
                     subject=email.subject,
                     email_uid=email.uid,
                     original_path=file_path,
+                    message_id=email.message_id,
                 )
                 saved_job = self._repo.save(job)
                 created_jobs.append(saved_job)

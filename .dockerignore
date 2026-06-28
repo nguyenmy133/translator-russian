@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+.coverage
+htmlcov/
+
+# Virtualenv
+venv/
+env/
+.venv/
+
+# Dữ liệu runtime (không đưa vào image)
+uploads/
+outputs/
+*.db
+*.sqlite3
+
+# Môi trường & secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+
+# Node (frontend build trong container riêng)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Test files
+test_*.py
+
+# CI/CD
+.github/
+
+# Logs
+*.log
+logs/
+
+# Render (không cần trong Docker)
+render.yaml

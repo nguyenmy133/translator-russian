@@ -8,6 +8,8 @@ export default function Dashboard() {
   const [stats, setStats]     = useState(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter]   = useState('ALL')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate]     = useState('')
 
   const fetchData = useCallback(async () => {
     try {
@@ -28,9 +30,30 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  const filteredJobs = filter === 'ALL'
-    ? jobs
-    : jobs.filter(j => j.status === filter)
+  const filteredJobs = jobs.filter(j => {
+    // 1. Lọc theo trạng thái tab
+    if (filter !== 'ALL' && j.status !== filter) return false
+
+    // 2. Lọc theo ngày bắt đầu
+    if (startDate) {
+      const jobDate = new Date(j.created_at)
+      const filterStart = new Date(startDate)
+      jobDate.setHours(0, 0, 0, 0)
+      filterStart.setHours(0, 0, 0, 0)
+      if (jobDate < filterStart) return false
+    }
+
+    // 3. Lọc theo ngày kết thúc
+    if (endDate) {
+      const jobDate = new Date(j.created_at)
+      const filterEnd = new Date(endDate)
+      jobDate.setHours(0, 0, 0, 0)
+      filterEnd.setHours(0, 0, 0, 0)
+      if (jobDate > filterEnd) return false
+    }
+
+    return true
+  })
 
   const filters = [
     { key: 'ALL',        label: 'Tất cả' },
@@ -66,6 +89,40 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Date Filter Panel */}
+      <div className="date-filter-panel">
+        <div className="date-filter-group">
+          <span className="date-filter-label">Từ ngày:</span>
+          <input
+            type="date"
+            className="date-input"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="date-filter-group">
+          <span className="date-filter-label">Đến ngày:</span>
+          <input
+            type="date"
+            className="date-input"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+        {(startDate || endDate) && (
+          <button
+            className="btn btn-sm btn-ghost"
+            style={{ color: '#ff7675' }}
+            onClick={() => {
+              setStartDate('')
+              setEndDate('')
+            }}
+          >
+            Clear lọc
+          </button>
+        )}
       </div>
 
       {/* Table */}

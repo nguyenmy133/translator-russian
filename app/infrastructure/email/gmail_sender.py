@@ -3,6 +3,7 @@ Infrastructure: Gmail SMTP Adapter — implements IEmailSender
 """
 import smtplib
 import logging
+from typing import Optional
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
@@ -30,33 +31,63 @@ class GmailSMTPSender(IEmailSender):
         translated_filename: str,
         paragraph_count: int,
         char_count: int,
+        file_only: bool = False,
+        original_message_id: Optional[str] = None,
+        original_subject: Optional[str] = None,
     ) -> None:
         msg = MIMEMultipart()
         msg["From"] = self._email
         msg["To"] = to_email
-        msg["Subject"] = f"✅ [Đã dịch] {translated_filename}"
 
-        body = self._success_html(
-            to_name, original_filename, translated_filename,
-            paragraph_count, char_count
-        )
-        msg.attach(MIMEText(body, "html", "utf-8"))
+        if original_message_id:
+            msg["In-Reply-To"] = original_message_id
+            msg["References"] = original_message_id
 
-        with open(translated_file_path, "rb") as f:
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(f.read())
-        encoders.encode_base64(part)
-        part.add_header("Content-Disposition", f'attachment; filename="{translated_filename}"')
-        msg.attach(part)
+        if file_only:
+            # Thiết lập tiêu đề để gộp luồng email của khách hàng
+            if original_subject:
+                subj = original_subject.strip()
+                if not subj.lower().startswith("re:"):
+                    subj = f"Re: {subj}"
+                msg["Subject"] = subj
+            # Gửi text trống, không kèm thư chúc mừng HTML
+            msg.attach(MIMEText("", "plain", "utf-8"))
+        else:
+            # Thư báo dịch thành công cho chủ hệ thống
+            msg["Subject"] = f"Dịch thành công file {original_filename}"
+            body = self._success_html(
+                to_name, original_filename, translated_filename,
+                paragraph_count, char_count
+            )
+            msg.attach(MIMEText(body, "html", "utf-8"))
+
+        # Chỉ đính kèm file khi gửi cho khách hàng (file_only=True)
+        if file_only:
+            with open(translated_file_path, "rb") as f:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(f.read())
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f'attachment; filename="{translated_filename}"')
+            msg.attach(part)
 
         self._send(to_email, msg)
-        logger.info(f"📤 Gửi thành công → {to_email}: {translated_filename}")
+        logger.info(f"📤 Gửi thành công ({'chỉ file' if file_only else 'thông báo'}) → {to_email}: {translated_filename}")
 
-    def send_failure(self, to_email: str, original_filename: str, error: str) -> None:
+    def send_failure(
+        self,
+        to_email: str,
+        original_filename: str,
+        error: str,
+        original_message_id: Optional[str] = None,
+    ) -> None:
         msg = MIMEMultipart()
         msg["From"] = self._email
         msg["To"] = to_email
         msg["Subject"] = f"❌ [Lỗi dịch] {original_filename}"
+
+        if original_message_id:
+            msg["In-Reply-To"] = original_message_id
+            msg["References"] = original_message_id
 
         body = f"""
         <html><body style="font-family:Arial,sans-serif;padding:20px;">

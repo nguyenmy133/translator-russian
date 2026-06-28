@@ -1,0 +1,84 @@
+# ============================================================
+# docker-compose.yml — Production Stack
+#
+# Services:
+#   backend   → FastAPI + APScheduler (port 8000, internal only)
+#   frontend  → React + Nginx (port 80 public)
+#
+# Volumes:
+#   uploads   → file Word gốc nhận từ email
+#   outputs   → file Word đã dịch
+#   db_data   → SQLite database
+# ============================================================
+version: "3.9"
+
+services:
+
+  # ── Backend (FastAPI) ─────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: email-translator-backend:latest
+    container_name: email_translator_backend
+
+    # Chỉ expose nội bộ trong Docker network, không public ra ngoài
+    expose:
+      - "8000"
+
+    # Biến môi trường: đọc từ file .env trên VPS
+    env_file:
+      - .env
+
+    volumes:
+      # Persist file uploads và outputs
+      - uploads_data:/app/uploads
+      - outputs_data:/app/outputs
+      # Persist SQLite database
+      - db_sqlite_data:/app/db
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/stats')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    networks:
+      - app_network
+
+  # ── Frontend (React + Nginx) ──────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: email-translator-frontend:latest
+    container_name: email_translator_frontend
+
+    ports:
+      # Windows local: dùng 8080 (port 80 cần quyền admin)
+      # Trên VPS Linux thật: đổi lại thành "80:80"
+      - "8080:80"
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    networks:
+      - app_network
+
+# ── Networks ──────────────────────────────────────────────
+networks:
+  app_network:
+    driver: bridge
+
+# ── Volumes ───────────────────────────────────────────────
+volumes:
+  uploads_data:
+  outputs_data:
+  db_sqlite_data:

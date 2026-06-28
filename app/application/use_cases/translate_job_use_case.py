@@ -52,12 +52,14 @@ class TranslateJobUseCase:
         document_parser: IDocumentParser,
         email_sender: IEmailSender,
         output_dir: str,
+        translator_email: str,
     ):
         self._repo = job_repository
         self._translator = translator
         self._parser = document_parser
         self._sender = email_sender
         self._output_dir = output_dir
+        self._translator_email = translator_email
 
     def execute_pending(self) -> int:
         """Xử lý tất cả job đang PENDING. Trả về số job đã xử lý."""
@@ -111,6 +113,7 @@ class TranslateJobUseCase:
             self._repo.save(job)
 
             # 4. Gửi email kết quả
+            # Gửi cho người gửi gốc (khách hàng) - chỉ gửi file
             self._sender.send_success(
                 to_email=job.sender_email,
                 to_name=job.sender_name,
@@ -119,8 +122,23 @@ class TranslateJobUseCase:
                 translated_filename=translated_filename,
                 paragraph_count=stats.paragraph_count,
                 char_count=stats.char_count,
+                file_only=True,
+                original_message_id=job.message_id,
+                original_subject=job.subject,
             )
-            logger.info(f"✅ Job #{job_id} hoàn thành. Đã gửi → {job.sender_email}")
+            # Gửi thông báo cho người dịch (chủ hệ thống)
+            self._sender.send_success(
+                to_email=self._translator_email,
+                to_name=job.sender_name,
+                original_filename=job.original_filename,
+                translated_file_path=output_path,
+                translated_filename=translated_filename,
+                paragraph_count=stats.paragraph_count,
+                char_count=stats.char_count,
+                original_message_id=job.message_id,
+                original_subject=job.subject,
+            )
+            logger.info(f"✅ Job #{job_id} hoàn thành. Đã gửi cho khách hàng ({job.sender_email}) và người dịch ({self._translator_email})")
 
         except Exception as e:
             error_msg = str(e)
@@ -135,6 +153,7 @@ class TranslateJobUseCase:
                     to_email=job.sender_email,
                     original_filename=job.original_filename,
                     error=error_msg,
+                    original_message_id=job.message_id,
                 )
             except Exception as send_err:
                 logger.error(f"Không thể gửi email lỗi: {send_err}")

@@ -72,6 +72,24 @@ class SQLiteJobRepository(IJobRepository):
         with self._session_factory() as session:
             return session.query(TranslationJobORM).filter_by(status=status.value).count()
 
+    def find_older_than_days(self, days: int) -> list[TranslationJob]:
+        from datetime import datetime, timedelta
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        with self._session_factory() as session:
+            orms = (
+                session.query(TranslationJobORM)
+                .filter(TranslationJobORM.created_at < cutoff)
+                .all()
+            )
+            return [self._to_entity(o) for o in orms]
+
+    def delete(self, job_id: int) -> None:
+        with self._session_factory() as session:
+            orm = session.query(TranslationJobORM).filter_by(id=job_id).first()
+            if orm:
+                session.delete(orm)
+                session.commit()
+
     # ──────────────────────────────────────────────────────────
     # Mapper methods (ORM ↔ Domain Entity)
     # ──────────────────────────────────────────────────────────
@@ -88,6 +106,7 @@ class SQLiteJobRepository(IJobRepository):
             sender_name=orm.sender_name or "",
             subject=orm.subject or "",
             email_uid=orm.email_uid or "",
+            message_id=orm.message_id,
             status=JobStatus(orm.status),
             error_message=orm.error_message,
             char_count=orm.char_count or 0,
@@ -108,6 +127,7 @@ class SQLiteJobRepository(IJobRepository):
             sender_name=job.sender_name,
             subject=job.subject,
             email_uid=job.email_uid,
+            message_id=job.message_id,
             status=job.status.value,
             error_message=job.error_message,
             char_count=job.char_count,

@@ -19,6 +19,7 @@ class TranslationJobORM(Base):
     sender_name = Column(String(255), nullable=True, default="")
     subject = Column(String(500), nullable=True, default="")
     email_uid = Column(String(255), nullable=True, unique=True, index=True)
+    message_id = Column(String(500), nullable=True)
 
     status = Column(String(50), default="PENDING", nullable=False, index=True)
     error_message = Column(Text, nullable=True)

@@ -21,6 +21,7 @@ class TranslationJob:
     # Email metadata
     sender_name: str = ""
     subject: str = ""
+    message_id: Optional[str] = None
 
     # File paths
     original_path: Optional[str] = None

@@ -4,6 +4,7 @@ Dùng deep-translator (FREE, không cần API key)
 """
 import time
 import logging
+import re
 from deep_translator import GoogleTranslator as _GoogleTranslator
 from app.application.ports.translator_port import ITranslator
 
@@ -50,19 +51,20 @@ class GoogleTranslatorAdapter(ITranslator):
 
     def _translate_chunked(self, text: str) -> str:
         """Chia text dài thành chunks, dịch từng phần."""
-        sentences = text.replace("!", ".").replace("?", ".").split(".")
+        # Tách câu bằng regex lookbehind để giữ nguyên các dấu câu . ! ? và tránh chia tách số thập phân như 1.5
+        sentences = re.split(r'(?<=[.!?])\s+', text)
         chunks, current = [], ""
 
         for sentence in sentences:
             sentence = sentence.strip()
             if not sentence:
                 continue
-            if len(current) + len(sentence) + 2 < MAX_CHARS:
-                current += sentence + ". "
+            if len(current) + len(sentence) + 1 < MAX_CHARS:
+                current += sentence + " "
             else:
                 if current:
                     chunks.append(current.strip())
-                current = sentence + ". "
+                current = sentence + " "
 
         if current:
             chunks.append(current.strip())

@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.eggs/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+.coverage
+htmlcov/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Runtime data (không commit dữ liệu thực)
+uploads/
+outputs/
+*.db
+*.sqlite3
+
+# Secrets — KHÔNG BAO GIỜ commit file này
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Logs
+*.log
+logs/

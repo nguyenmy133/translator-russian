@@ -32,6 +32,15 @@ async def lifespan(app: FastAPI):
     """Startup & Shutdown lifecycle."""
     # ── Startup ──────────────────────────────────────────────────────
     logger.info("🚀 Khởi động Email Translator...")
+    
+    # Đảm bảo thư mục chứa database tồn tại (nếu dùng sqlite)
+    if settings.database_url.startswith("sqlite:///"):
+        db_file = settings.database_url.replace("sqlite:///", "")
+        db_dir = os.path.dirname(db_file)
+        if db_dir and db_dir not in (".", "./", ""):
+            os.makedirs(db_dir, exist_ok=True)
+            logger.info(f"📁 Đã tạo thư mục database: {db_dir}")
+
     init_database()
     logger.info("✅ Database đã sẵn sàng.")
 

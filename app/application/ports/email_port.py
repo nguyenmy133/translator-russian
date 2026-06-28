@@ -22,6 +22,7 @@ class IncomingEmail:
     sender_name: str
     subject: str
     attachments: list[EmailAttachment]
+    message_id: Optional[str] = None
 
 
 class IEmailReader(ABC):
@@ -48,6 +49,9 @@ class IEmailSender(ABC):
         translated_filename: str,
         paragraph_count: int,
         char_count: int,
+        file_only: bool = False,
+        original_message_id: Optional[str] = None,
+        original_subject: Optional[str] = None,
     ) -> None:
         ...
 
@@ -57,5 +61,6 @@ class IEmailSender(ABC):
         to_email: str,
         original_filename: str,
         error: str,
+        original_message_id: Optional[str] = None,
     ) -> None:
         ...
