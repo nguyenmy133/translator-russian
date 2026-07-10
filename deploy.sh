@@ -12,7 +12,7 @@ set -e  # Dừng ngay khi có lỗi
 
 # ── THAY ĐỔI CÁC BIẾN SAU CHO PHÙ HỢP VPS CỦA BẠN ────────
 VPS_USER="root"                      # user SSH trên VPS
-VPS_HOST="YOUR_VPS_IP"              # IP hoặc domain VPS của bạn
+VPS_HOST="103.77.243.1"              # IP hoặc domain VPS của bạn
 VPS_PORT="22"                        # Port SSH (mặc định 22)
 APP_DIR="/opt/email-translator"      # Thư mục triển khai trên VPS
 # ────────────────────────────────────────────────────────────

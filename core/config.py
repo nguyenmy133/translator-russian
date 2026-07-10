@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./translator.db"
     secret_key: str = "change-me-in-production"
 
+    # Gemini
+    gemini_api_key: str = ""
+
+    # Whitelist senders
+    allowed_senders: str = "content@clawshorns.com,meinguyen133@gmail.com"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

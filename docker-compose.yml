@@ -59,9 +59,8 @@ services:
     container_name: email_translator_frontend
 
     ports:
-      # Windows local: dùng 8080 (port 80 cần quyền admin)
-      # Trên VPS Linux thật: đổi lại thành "80:80"
-      - "8080:80"
+      # Bảo mật: Chỉ cho phép Nginx trên Host VPS truy cập qua localhost
+      - "127.0.0.1:8080:80"
 
     depends_on:
       backend:

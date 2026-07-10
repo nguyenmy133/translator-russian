@@ -88,8 +88,39 @@ ENV_TEMPLATE
     echo "   Hãy chỉnh sửa file này với thông tin thực của bạn!"
 fi
 
-echo "[5/5] Cài thêm công cụ hữu ích..."
-apt-get install -y -qq git htop curl wget
+echo "[5/5] Cài đặt Nginx, Certbot SSL và các công cụ hữu ích..."
+apt-get install -y -qq git htop curl wget nginx certbot python3-certbot-nginx
+
+# Tạo file cấu hình Nginx Server Block cho tên miền russian-translatoz.xyz
+echo "--- VPS: Cấu hình Nginx Reverse Proxy..."
+cat > /etc/nginx/sites-available/russian-translatoz.xyz << 'NGINX_CONFIG'
+server {
+    listen 80;
+    server_name russian-translatoz.xyz www.russian-translatoz.xyz;
+
+    # Hạn mức dung lượng upload tối đa cho file Word lớn (50MB)
+    client_max_body_size 50M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Hỗ trợ WebSockets (nếu cần cho live connection)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+NGINX_CONFIG
+
+# Kích hoạt cấu hình Nginx và reload dịch vụ
+ln -sf /etc/nginx/sites-available/russian-translatoz.xyz /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default || true
+nginx -t
+systemctl restart nginx
 
 echo ""
 echo "====================================================="
@@ -98,14 +129,19 @@ echo ""
 echo "  Bước tiếp theo:"
 echo "  1. Chỉnh sửa file .env:"
 echo "     nano $APP_DIR/.env"
+echo "     (Điền GEMINI_API_KEY, GMAIL_ADDRESS, GMAIL_APP_PASSWORD, v.v.)"
 echo ""
 echo "  2. Clone code từ GitHub:"
 echo "     cd $APP_DIR"
 echo "     git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git ."
 echo ""
-echo "  3. Build và chạy:"
+echo "  3. Khởi chạy ứng dụng bằng Docker:"
 echo "     docker compose up -d --build"
 echo ""
-echo "  4. Xem logs:"
+echo "  4. Kích hoạt HTTPS bảo mật (SSL) qua Let's Encrypt:"
+echo "     sudo certbot --nginx -d russian-translatoz.xyz -d www.russian-translatoz.xyz"
+echo "     (Lưu ý: Bạn cần trỏ DNS của tên miền về IP 103.77.243.1 trước)"
+echo ""
+echo "  5. Kiểm tra logs hệ thống:"
 echo "     docker compose logs -f"
 echo "====================================================="

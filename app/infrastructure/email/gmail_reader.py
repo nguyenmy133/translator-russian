@@ -88,11 +88,21 @@ def _connect_imap(host: str, port: int, email_address: str, password: str) -> im
 class GmailIMAPReader(IEmailReader):
     """Kết nối Gmail qua IMAP SSL, tìm email chưa đọc có file Word tiếng Nga."""
 
-    def __init__(self, host: str, port: int, email_address: str, app_password: str):
+    def __init__(self, host: str, port: int, email_address: str, app_password: str, allowed_senders: str = "*"):
         self._host = host
         self._port = port
         self._email = email_address
         self._password = app_password
+        
+        # Whitelist senders
+        if not allowed_senders or allowed_senders.strip() == "*":
+            self._allow_all_senders = True
+            self._allowed_senders_set = set()
+        else:
+            self._allow_all_senders = False
+            self._allowed_senders_set = {
+                s.strip().lower() for s in allowed_senders.split(",") if s.strip()
+            }
 
     def _sort_attachments_by_subject(self, attachments: list[EmailAttachment], subject: str) -> list[EmailAttachment]:
         if not attachments or len(attachments) <= 1 or not subject:
@@ -169,13 +179,12 @@ class GmailIMAPReader(IEmailReader):
                 try:
                     header_msg = email.message_from_bytes(raw_header)
 
-                    # Lọc người gửi (Chỉ chấp nhận từ content@clawshorns.com và meinguyen133@gmail.com)
+                    # Lọc người gửi qua whitelist động
                     from_header = _decode_str(header_msg.get("From", ""))
                     _, sender_email = _parse_sender(from_header)
                     sender_email = sender_email.lower().strip()
 
-                    allowed_senders = {"content@clawshorns.com", "meinguyen133@gmail.com"}
-                    if sender_email not in allowed_senders:
+                    if not self._allow_all_senders and sender_email not in self._allowed_senders_set:
                         # Bỏ qua hoàn toàn và GIỮ NGUYÊN trạng thái chưa đọc (UNREAD)
                         continue
 

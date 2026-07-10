@@ -11,7 +11,7 @@ from app.infrastructure.persistence.orm_models import TranslationJobORM  # noqa:
 from app.infrastructure.persistence.job_repository_impl import SQLiteJobRepository
 from app.infrastructure.email.gmail_reader import GmailIMAPReader
 from app.infrastructure.email.gmail_sender import GmailSMTPSender
-from app.infrastructure.translation.google_translator import GoogleTranslatorAdapter
+from app.infrastructure.translation.gemini_translator import GeminiTranslatorAdapter
 from app.infrastructure.document.docx_parser import DocxParser
 
 from app.application.use_cases.process_email_use_case import ProcessEmailUseCase
@@ -45,6 +45,7 @@ def get_email_reader() -> GmailIMAPReader:
         port=_settings.imap_port,
         email_address=_settings.gmail_address,
         app_password=_settings.gmail_app_password,
+        allowed_senders=_settings.allowed_senders,
     )
 
 
@@ -57,8 +58,12 @@ def get_email_sender() -> GmailSMTPSender:
     )
 
 
-def get_translator() -> GoogleTranslatorAdapter:
-    return GoogleTranslatorAdapter(source="ru", target="vi")
+def get_translator() -> GeminiTranslatorAdapter:
+    return GeminiTranslatorAdapter(
+        api_key=_settings.gemini_api_key,
+        source="ru",
+        target="vi",
+    )
 
 
 def get_document_parser() -> DocxParser:
