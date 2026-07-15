@@ -126,18 +126,19 @@ class TranslateJobUseCase:
                 original_message_id=job.message_id,
                 original_subject=job.subject,
             )
-            # Gửi thông báo cho người dịch (chủ hệ thống)
-            self._sender.send_success(
-                to_email=self._translator_email,
-                to_name=job.sender_name,
-                original_filename=job.original_filename,
-                translated_file_path=output_path,
-                translated_filename=translated_filename,
-                paragraph_count=stats.paragraph_count,
-                char_count=stats.char_count,
-                original_message_id=job.message_id,
-                original_subject=job.subject,
-            )
+            # Gửi thông báo cho người dịch (chủ hệ thống) - chỉ gửi nếu khác email khách hàng
+            if self._translator_email and job.sender_email.lower().strip() != self._translator_email.lower().strip():
+                self._sender.send_success(
+                    to_email=self._translator_email,
+                    to_name=job.sender_name,
+                    original_filename=job.original_filename,
+                    translated_file_path=output_path,
+                    translated_filename=translated_filename,
+                    paragraph_count=stats.paragraph_count,
+                    char_count=stats.char_count,
+                    original_message_id=job.message_id,
+                    original_subject=job.subject,
+                )
             logger.info(f"✅ Job #{job_id} hoàn thành. Đã gửi cho khách hàng ({job.sender_email}) và người dịch ({self._translator_email})")
 
         except Exception as e:
