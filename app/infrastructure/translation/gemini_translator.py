@@ -123,6 +123,12 @@ class GeminiTranslatorAdapter(ITranslator):
                     f"Code {status_code}. Chi tiết: {error_body}"
                 )
                 
+                # Lỗi xác thực/phân quyền/cấu hình → ném lỗi ngay, không retry
+                if status_code in (400, 401, 403):
+                    raise RuntimeError(
+                        f"Gemini API lỗi xác thực/cấu hình (HTTP {status_code}): {error_body}"
+                    )
+
                 # Nếu bị rate limit (429), ngủ lâu hơn để hồi phục
                 if status_code == 429:
                     sleep_time = 10 * (attempt + 1)
@@ -130,9 +136,13 @@ class GeminiTranslatorAdapter(ITranslator):
                     time.sleep(sleep_time)
                 else:
                     time.sleep(2 ** attempt)
+            except RuntimeError:
+                # Để RuntimeError từ khối trên đi qua, không bắt lại
+                raise
             except Exception as e:
                 logger.error(f"❌ Lỗi kết nối Gemini API (Lần {attempt+1}/{max_retries}): {e}")
                 time.sleep(2 ** attempt)
 
-        logger.error("❌ Không thể kết nối Gemini API sau nhiều lần thử. Trả về bản gốc.")
-        return prompt
+        raise RuntimeError(
+            f"Không thể kết nối Gemini API sau {max_retries} lần thử."
+        )

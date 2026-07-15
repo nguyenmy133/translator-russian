@@ -50,13 +50,7 @@ class GmailSMTPSender(IEmailSender):
                 if not subj.lower().startswith("re:"):
                     subj = f"Re: {subj}"
                 msg["Subject"] = subj
-            # Tránh gửi email có thân thư hoàn toàn trống để tránh bị đánh dấu Spam
-            body_text = (
-                f"Chào bạn {to_name or ''},\n\n"
-                f"Hệ thống dịch thuật tự động gửi bạn bản dịch tiếng Việt của tài liệu \"{original_filename}\" đính kèm bên dưới.\n\n"
-                f"Trân trọng,\nEmail Translator System"
-            )
-            msg.attach(MIMEText(body_text, "plain", "utf-8"))
+            
         else:
             # Thư báo dịch thành công cho chủ hệ thống
             msg["Subject"] = f"Dịch thành công file {original_filename}"

@@ -68,17 +68,20 @@ export default function Dashboard() {
       {/* Stats */}
       <StatsCards stats={stats} loading={loading} />
 
-      {/* Header + Filter */}
-      <div className="page-header">
+      {/* Header */}
+      <div className="page-header" style={{ marginBottom: '20px' }}>
         <div>
           <h1 className="page-title">Danh sách bài dịch</h1>
           <p className="page-subtitle">
-            Cập nhật tự động mỗi 30 giây · Tổng {stats?.total ?? '...'} bài
+            Cập nhật tự động mỗi 30 giây · Tổng {stats?.total ?? '0'} bài dịch
           </p>
         </div>
+      </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-8">
+      {/* Unified Filter Toolbar */}
+      <div className="date-filter-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '24px' }}>
+        {/* Status filter tabs */}
+        <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
           {filters.map(f => (
             <button
               key={f.key}
@@ -89,40 +92,40 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Date Filter Panel */}
-      <div className="date-filter-panel">
-        <div className="date-filter-group">
-          <span className="date-filter-label">Từ ngày:</span>
-          <input
-            type="date"
-            className="date-input"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
+        {/* Date Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div className="date-filter-group">
+            <span className="date-filter-label">Từ ngày:</span>
+            <input
+              type="date"
+              className="date-input"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="date-filter-group">
+            <span className="date-filter-label">Đến ngày:</span>
+            <input
+              type="date"
+              className="date-input"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              className="btn btn-sm btn-ghost"
+              style={{ color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)' }}
+              onClick={() => {
+                setStartDate('')
+                setEndDate('')
+              }}
+            >
+              Clear
+            </button>
+          )}
         </div>
-        <div className="date-filter-group">
-          <span className="date-filter-label">Đến ngày:</span>
-          <input
-            type="date"
-            className="date-input"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </div>
-        {(startDate || endDate) && (
-          <button
-            className="btn btn-sm btn-ghost"
-            style={{ color: '#ff7675' }}
-            onClick={() => {
-              setStartDate('')
-              setEndDate('')
-            }}
-          >
-            Clear lọc
-          </button>
-        )}
       </div>
 
       {/* Table */}

@@ -1,19 +1,22 @@
 """
 Use Case: Poll emails và tạo TranslationJob mới.
+Tự động phát hiện ngôn ngữ Nga trong file .docx (không phụ thuộc tên file).
 """
 import os
 import logging
+import hashlib
 from app.domain.entities.translation_job import TranslationJob
 from app.domain.repositories.job_repository import IJobRepository
 from app.application.ports.email_port import IEmailReader
+from app.infrastructure.document.language_detector import is_russian_document
 
 logger = logging.getLogger(__name__)
 
 
 class ProcessEmailUseCase:
     """
-    Orchestrate: đọc email mới → lưu file → tạo job PENDING.
-    Không thực hiện dịch thuật (tách biệt trách nhiệm).
+    Orchestrate: đọc email mới → lưu file → detect ngôn ngữ → tạo job PENDING.
+    Chỉ tạo job cho file .docx có nội dung tiếng Nga.
     """
 
     def __init__(
@@ -37,21 +40,39 @@ class ProcessEmailUseCase:
             return []
 
         for email in emails:
-            # Tránh xử lý email đã từng xử lý
-            existing = self._repo.find_by_email_uid(email.uid)
-            if existing:
-                logger.debug(f"⏩ Email UID {email.uid} đã được xử lý. Bỏ qua.")
-                continue
-
             for attachment in email.attachments:
+                # Tránh xử lý file đính kèm đã từng xử lý
+                raw_uid = f"{email.uid}:{attachment.filename}"
+                attachment_uid = hashlib.sha256(raw_uid.encode('utf-8')).hexdigest()
+                
+                existing = self._repo.find_by_email_uid(attachment_uid)
+                if existing:
+                    logger.debug(
+                        f"⏩ File '{attachment.filename}' trong Email UID {email.uid} "
+                        f"đã được xử lý. Bỏ qua."
+                    )
+                    continue
+
                 file_path = self._save_file(attachment.filename, attachment.content)
+
+                # Phát hiện ngôn ngữ: chỉ dịch file tiếng Nga
+                if not is_russian_document(file_path):
+                    logger.info(
+                        f"⏩ File '{attachment.filename}' không phải tiếng Nga. "
+                        f"Bỏ qua và xóa file tạm."
+                    )
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        pass
+                    continue
 
                 job = TranslationJob(
                     original_filename=attachment.filename,
                     sender_email=email.sender_email,
                     sender_name=email.sender_name,
                     subject=email.subject,
-                    email_uid=email.uid,
+                    email_uid=attachment_uid,
                     original_path=file_path,
                     message_id=email.message_id,
                 )

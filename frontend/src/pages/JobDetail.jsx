@@ -75,8 +75,8 @@ export default function JobDetail() {
 
       <div className="detail-grid">
         {/* Left: Info */}
-        <div className="card">
-          <p className="section-title">Thông tin bài dịch</p>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <p className="section-title">Thông tin chi tiết</p>
 
           {[
             { label: '📄 File gốc',      value: job.original_filename },
@@ -91,19 +91,21 @@ export default function JobDetail() {
           ].map(row => (
             <div key={row.label} className="info-row">
               <span className="info-label">{row.label}</span>
-              <span className="info-value">{row.value}</span>
+              <span className="info-value" style={{ fontWeight: '500' }}>{row.value}</span>
             </div>
           ))}
 
           {job.error_message && (
             <div className="error-box">
-              ⚠️ Lỗi: {job.error_message}
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>⚠️ LỖI HỆ THỐNG:</div>
+              {job.error_message}
             </div>
           )}
         </div>
 
-        {/* Right: Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Right: Actions & Timeline */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {/* Actions */}
           <div className="card">
             <p className="section-title">Thao tác</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -128,7 +130,7 @@ export default function JobDetail() {
                   disabled={retrying}
                   style={{ justifyContent: 'center' }}
                 >
-                  {retrying ? '⏳ Đang retry...' : '🔁 Retry bài này'}
+                  {retrying ? '⏳ Đang retry...' : '🔁 Thử lại ngay'}
                 </button>
               )}
 
@@ -142,43 +144,43 @@ export default function JobDetail() {
             </div>
           </div>
 
-          {/* Status timeline */}
+          {/* Stepper Timeline */}
           <div className="card">
-            <p className="section-title">Trạng thái</p>
-            {['PENDING', 'PROCESSING', 'DONE'].map((s, i) => {
-              const statusOrder = { PENDING: 0, PROCESSING: 1, DONE: 2, FAILED: 2 }
-              const currentOrder = statusOrder[job.status] ?? 0
-              const isDone = currentOrder > i
-              const isCurrent = job.status === s || (s === 'DONE' && job.status === 'FAILED')
-              const isFailed = s === 'DONE' && job.status === 'FAILED'
+            <p className="section-title">Quy trình xử lý</p>
+            <div className="timeline">
+              {['PENDING', 'PROCESSING', 'DONE'].map((s, i) => {
+                const statusOrder = { PENDING: 0, PROCESSING: 1, DONE: 2, FAILED: 2 }
+                const currentOrder = statusOrder[job.status] ?? 0
+                const isDone = currentOrder > i
+                const isCurrent = job.status === s || (s === 'DONE' && job.status === 'FAILED')
+                const isFailed = s === 'DONE' && job.status === 'FAILED'
 
-              return (
-                <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0,
-                    background: isDone
-                      ? 'var(--success-dim)'
-                      : isFailed ? 'var(--danger-dim)'
-                      : isCurrent ? 'var(--accent-dim)'
-                      : 'var(--bg-input)',
-                    border: `2px solid ${
-                      isDone ? 'var(--success)'
-                      : isFailed ? 'var(--danger)'
-                      : isCurrent ? 'var(--accent)'
-                      : 'var(--border)'
-                    }`,
-                  }}>
-                    {isDone ? '✓' : isFailed ? '✕' : i + 1}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: isCurrent || isDone ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                      {isFailed ? 'Thất bại' : { PENDING: 'Chờ xử lý', PROCESSING: 'Đang dịch', DONE: 'Hoàn thành' }[s]}
+                let itemClass = ""
+                if (isDone) itemClass = "done"
+                else if (isFailed) itemClass = "failed"
+                else if (isCurrent) itemClass = "active"
+
+                const title = isFailed 
+                  ? 'Gặp lỗi khi dịch' 
+                  : { PENDING: 'Chờ xử lý', PROCESSING: 'Đang dịch thuật', DONE: 'Hoàn thành' }[s]
+
+                const desc = {
+                  PENDING: 'Hệ thống đã nhận email và đưa file vào hàng đợi.',
+                  PROCESSING: 'Đang tiến hành đọc file Word và dịch bằng Gemini AI.',
+                  DONE: isFailed ? 'Xảy ra lỗi trong quá trình dịch thuật hoặc gửi mail.' : 'Đã dịch xong và gửi file dịch về mail người gửi.'
+                }[s]
+
+                return (
+                  <div key={s} className={`timeline-item ${itemClass}`}>
+                    <div className="timeline-dot" />
+                    <div className="timeline-content">
+                      <div className="timeline-title">{title}</div>
+                      <div className="timeline-desc">{desc}</div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

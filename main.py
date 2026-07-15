@@ -2,6 +2,7 @@
 FastAPI Application Entry Point
 - Pure API backend (React frontend served separately or as build)
 - CORS enabled for React dev server
+- Google OAuth Authentication
 - Scheduler chạy nền poll email mỗi 5 phút
 """
 import logging
@@ -17,6 +18,9 @@ from core.config import get_settings
 from core.dependencies import init_database
 from core.scheduler import start_scheduler, stop_scheduler
 from app.presentation.api.jobs_router import router as jobs_router
+from app.presentation.api.auth_router import router as auth_router
+from app.presentation.api.email_accounts_router import router as email_accounts_router
+from app.presentation.api.auth_middleware import AuthMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,9 +63,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Email Translator API",
     description="Tự động dịch file Word từ tiếng Nga sang tiếng Việt qua email",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
+
+# ── Auth Middleware ────────────────────────────────────────────────────
+app.add_middleware(AuthMiddleware)
 
 # ── CORS (cho React dev server chạy ở port 5173) ─────────────────────
 app.add_middleware(
@@ -78,7 +85,14 @@ app.add_middleware(
 )
 
 # ── API Routes ────────────────────────────────────────────────────────
+app.include_router(auth_router)
+app.include_router(email_accounts_router)
 app.include_router(jobs_router)
+
+
+@app.get("/api/health", tags=["System"])
+async def health_check():
+    return {"status": "ok"}
 
 
 # ── Serve React Build (production) ───────────────────────────────────

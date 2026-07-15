@@ -43,3 +43,8 @@ class IJobRepository(ABC):
     @abstractmethod
     def delete(self, job_id: int) -> None:
         ...
+
+    @abstractmethod
+    def delete_by_ids(self, job_ids: list[int]) -> int:
+        """Xóa nhiều jobs theo danh sách IDs. Trả về số lượng đã xóa."""
+        ...

@@ -90,6 +90,19 @@ class SQLiteJobRepository(IJobRepository):
                 session.delete(orm)
                 session.commit()
 
+    def delete_by_ids(self, job_ids: list[int]) -> int:
+        """Xóa nhiều jobs theo danh sách IDs. Trả về số lượng đã xóa."""
+        if not job_ids:
+            return 0
+        with self._session_factory() as session:
+            count = (
+                session.query(TranslationJobORM)
+                .filter(TranslationJobORM.id.in_(job_ids))
+                .delete(synchronize_session="fetch")
+            )
+            session.commit()
+            return count
+
     # ──────────────────────────────────────────────────────────
     # Mapper methods (ORM ↔ Domain Entity)
     # ──────────────────────────────────────────────────────────

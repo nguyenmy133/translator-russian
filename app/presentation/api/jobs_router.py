@@ -34,6 +34,10 @@ class JobResponse(BaseModel):
         from_attributes = True
 
 
+class DeleteJobsRequest(BaseModel):
+    ids: list[int]
+
+
 def _job_to_dict(job) -> dict:
     return {
         "id": job.id,
@@ -87,6 +91,19 @@ async def retry_job(job_id: int):
         return {"message": f"Job #{job_id} đang được retry."}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/jobs")
+async def delete_jobs(body: DeleteJobsRequest):
+    """Xóa nhiều jobs theo danh sách IDs (kèm xóa file trên disk)."""
+    if not body.ids:
+        raise HTTPException(status_code=400, detail="Danh sách IDs không được rỗng")
+    if len(body.ids) > 100:
+        raise HTTPException(status_code=400, detail="Tối đa xóa 100 jobs mỗi lần")
+
+    uc = get_jobs_use_case()
+    deleted = uc.delete_jobs(body.ids)
+    return {"message": f"Đã xóa {deleted} bài dịch", "deleted": deleted}
 
 
 @router.get("/jobs/{job_id}/download")

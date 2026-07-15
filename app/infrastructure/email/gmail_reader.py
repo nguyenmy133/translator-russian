@@ -40,14 +40,10 @@ def _decode_str(s) -> str:
     return result
 
 
-def _is_russian_docx(filename: str) -> bool:
+def _is_docx(filename: str) -> bool:
     """
-    Nhận diện file Word tiếng Nga. Hỗ trợ các format thực tế:
-      - "23.06 GBPUSD ru.docx"   ← format thực tế (space + ru, KHÔNG ngoặc)
-      - "abc (ru).docx"          ← format có ngoặc tròn
-      - "abc(ru).docx"           ← format có ngoặc không space
-
-    Và bỏ qua các bài có chứa từ "audio" trong tên file.
+    Kiểm tra file có phải .docx không (bỏ qua file audio).
+    Không còn filter theo tên file — detect ngôn ngữ sẽ xảy ra ở bước sau.
     """
     if not filename:
         return False
@@ -57,15 +53,7 @@ def _is_russian_docx(filename: str) -> bool:
     if "audio" in name:
         return False
 
-    if not name.endswith(".docx"):
-        return False
-    # Pattern 1: kết thúc bằng " ru.docx" (space trước ru, không ngoặc) — format thực tế
-    if re.search(r'\sru\.docx$', name):
-        return True
-    # Pattern 2: chứa "(ru)" ở bất kỳ đâu trong tên — format có ngoặc
-    if re.search(r'\(ru\)', name):
-        return True
-    return False
+    return name.endswith(".docx")
 
 
 def _parse_sender(from_header: str) -> tuple[str, str]:
@@ -203,7 +191,7 @@ class GmailIMAPReader(IEmailReader):
                         continue
 
                     msg: Message = email.message_from_bytes(raw_bytes)
-                    attachments = self._extract_ru_docx(msg)
+                    attachments = self._extract_docx_attachments(msg)
 
                     if not attachments:
                         continue
@@ -222,7 +210,7 @@ class GmailIMAPReader(IEmailReader):
                     mail.uid("store", uid, "+FLAGS", "\\Seen")
 
                     results.append(IncomingEmail(
-                        uid=uid_str,
+                        uid=f"{self._email.lower()}:{uid_str}",
                         sender_email=sender_email,
                         sender_name=sender_name,
                         subject=subject_str,
@@ -259,7 +247,8 @@ class GmailIMAPReader(IEmailReader):
         return results
 
     @staticmethod
-    def _extract_ru_docx(msg: Message) -> list[EmailAttachment]:
+    def _extract_docx_attachments(msg: Message) -> list[EmailAttachment]:
+        """Trích xuất TẤT CẢ file .docx đính kèm (không filter theo tên)."""
         found = []
         for part in msg.walk():
             content_disposition = part.get("Content-Disposition", "")
@@ -269,7 +258,7 @@ class GmailIMAPReader(IEmailReader):
             if not raw_name:
                 continue
             filename = _decode_str(raw_name)
-            if _is_russian_docx(filename):
+            if _is_docx(filename):
                 content = part.get_payload(decode=True)
                 if content:
                     found.append(EmailAttachment(filename=filename, content=content))

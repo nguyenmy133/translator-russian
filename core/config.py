@@ -26,9 +26,13 @@ class Settings(BaseSettings):
     # Whitelist senders
     allowed_senders: str = "content@clawshorns.com,meinguyen133@gmail.com"
 
+    # Google OAuth
+    google_client_id: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 @lru_cache()
